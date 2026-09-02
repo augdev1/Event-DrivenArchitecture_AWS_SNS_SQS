@@ -192,10 +192,12 @@ export default function App() {
     }
   };
 
-  // 4. Deletar Comanda Única (DELETE /orders/{id})
+  // 4. Deletar Comanda Única (DELETE /orders/{id}) - Remoção Instantânea
   const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm(`Deseja realmente excluir a comanda #${orderId} do sistema?`)) {
-      return;
+    // 1. Remove imediatamente da tela (Optimistic UI)
+    setAllOrders((prev) => prev.filter((o) => o.order_id !== orderId));
+    if (activeOrder && activeOrder.order_id === orderId) {
+      setActiveOrder(null);
     }
 
     try {
@@ -204,24 +206,19 @@ export default function App() {
       });
 
       if (res.ok) {
-        addTelemetry(`[DynamoDB] Comanda #${orderId} excluída fisicamente do banco`, 'dynamo');
+        addTelemetry(`[DynamoDB] Comanda #${orderId} excluída do banco`, 'dynamo');
         addTelemetry(`[SNS] Notificado 'OrderDeleted' para os serviços`, 'sns');
-        if (activeOrder && activeOrder.order_id === orderId) {
-          setActiveOrder(null);
-        }
-        fetchOrdersList();
       }
     } catch (err) {
       console.error('Erro ao deletar comanda:', err);
-      alert('Erro de conexão ao deletar comanda.');
     }
   };
 
-  // 5. Limpar Todos os Pedidos (DELETE /orders)
+  // 5. Limpar Todos os Pedidos (DELETE /orders) - Reset Instantâneo
   const handleClearAllOrders = async () => {
-    if (!window.confirm('Atenção: Deseja apagar TODOS os pedidos do banco de dados (reset completo)?')) {
-      return;
-    }
+    // Remove imediatamente tudo da tela
+    setAllOrders([]);
+    setActiveOrder(null);
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
@@ -229,9 +226,7 @@ export default function App() {
       });
 
       if (res.ok) {
-        addTelemetry('[DynamoDB] Todos os registros de pedidos foram resetados', 'dynamo');
-        setActiveOrder(null);
-        fetchOrdersList();
+        addTelemetry('[DynamoDB] Todos os pedidos foram resetados', 'dynamo');
       }
     } catch (err) {
       console.error('Erro ao resetar pedidos:', err);
@@ -257,7 +252,7 @@ export default function App() {
           console.error(e);
         }
       }
-    }, 1800);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [activeOrder]);
@@ -274,13 +269,17 @@ export default function App() {
     return { text: `${mins}m (Atrasado!)`, level: 'late' };
   };
 
-  // Filtragem de pedidos para KDS
-  const filteredOrders = allOrders.filter((o) => {
+  // Filtra APENAS pedidos válidos (descarta fantasmas vazios sem itens)
+  const validOrders = allOrders.filter(
+    (o) => o && o.order_id && Array.isArray(o.items) && o.items.length > 0
+  );
+
+  const filteredOrders = validOrders.filter((o) => {
     if (kitchenFilter === 'ALL') return true;
     return o.status === kitchenFilter;
   });
 
-  const countByStatus = (st) => allOrders.filter((o) => o.status === st).length;
+  const countByStatus = (st) => validOrders.filter((o) => o.status === st).length;
 
   const getStepProgress = (status) => {
     if (status === 'PENDING') return '15%';

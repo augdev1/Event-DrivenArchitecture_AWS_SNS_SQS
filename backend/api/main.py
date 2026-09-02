@@ -143,13 +143,25 @@ def get_order(order_id: str):
 @app.get("/orders")
 def list_orders():
     """
-    Lista todos os pedidos salvos no DynamoDB
+    Lista todos os pedidos salvos no DynamoDB e auto-purga itens corrompidos/sem itens
     """
     response = orders_table.scan()
     items = response.get("Items", [])
+    valid_items = []
+
+    for item in items:
+        # Se for um item inválido (sem items ou lista vazia), exclui do DynamoDB
+        if not item.get("order_id") or not item.get("items") or len(item.get("items")) == 0:
+            try:
+                orders_table.delete_item(Key={"order_id": item.get("order_id")})
+            except Exception:
+                pass
+        else:
+            valid_items.append(item)
+
     # Ordena pelos mais recentes primeiro
-    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    return items
+    valid_items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return valid_items
 
 
 @app.patch("/orders/{order_id}/status")
