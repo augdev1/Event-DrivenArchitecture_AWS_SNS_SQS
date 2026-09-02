@@ -27,12 +27,15 @@ orders_table = dynamodb.Table("Orders")
 QUEUE_URL = f"{AWS_ENDPOINT_URL}/000000000000/kitchen-queue"
 
 
+import datetime
+
 def update_order_status(order_id: str, new_status: str):
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     orders_table.update_item(
         Key={"order_id": order_id},
-        UpdateExpression="SET #s = :status",
+        UpdateExpression="SET #s = :status, updated_at = :updated_at",
         ExpressionAttributeNames={"#s": "status"},
-        ExpressionAttributeValues={":status": new_status},
+        ExpressionAttributeValues={":status": new_status, ":updated_at": now_iso},
     )
     print(f"🔄 [STATUS ATUALIZADO] Pedido #{order_id} -> {new_status}")
 
@@ -69,23 +72,17 @@ def process_kitchen_queue():
                 for item in items:
                     print(f"   👉 {item['quantity']}x {item['name']}")
 
-                # 1. Muda status para PREPARANDO
+                # 1. Muda status para PREPARANDO (Entrou na fila da cozinha física)
                 update_order_status(order_id, "PREPARING")
+                print(f"🍳 [COZINHA] Pedido #{order_id} entrou na esteira física da cozinha!")
 
-                # 2. Simula o tempo de preparo da cozinha (3 segundos)
-                print("⏳ [COZINHA] Preparando lanche...")
-                time.sleep(3)
-
-                # 3. Muda status para PRONTO
-                update_order_status(order_id, "READY")
-                print(f"✅ [COZINHA] Pedido #{order_id} está PRONTO para entrega!")
-
-                # 4. Remove a mensagem da fila SQS (confirmação de processamento)
+                # 2. Remove a mensagem da fila SQS (confirmação de que a comanda foi recebida na cozinha)
                 sqs.delete_message(
                     QueueUrl=QUEUE_URL,
                     ReceiptHandle=receipt_handle
                 )
-                print(f"🗑️ [SQS] Mensagem do pedido #{order_id} deletada da fila.")
+                print(f"🗑️ [SQS] Mensagem do pedido #{order_id} confirmada e deletada da fila.")
+                print("⏳ [AGUARDANDO COZINHEIRO] O cozinheiro físico marcará como pronto via painel KDS.")
 
         except Exception as e:
             print(f"⚠️ Erro ao processar mensagem: {e}")

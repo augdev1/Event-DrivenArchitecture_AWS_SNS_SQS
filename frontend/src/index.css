@@ -510,3 +510,322 @@ body {
 .tag-sns { background: rgba(237, 100, 166, 0.2); color: #F687B3; }
 .tag-sqs { background: rgba(246, 173, 85, 0.2); color: #FBD38D; }
 .tag-dynamo { background: rgba(99, 179, 237, 0.2); color: #90CDF4; }
+
+/* KDS Kitchen Management Styles */
+.kds-header {
+  background: var(--bg-card);
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.kds-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--border-light);
+  border-color: var(--text-muted);
+}
+
+.btn-danger-outline {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #FEB2B2;
+  background: #FFF5F5;
+  color: #C53030;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-outline:hover {
+  background: #FED7D7;
+  border-color: #E53E3E;
+}
+
+/* Filtros de Status (Pills) */
+.kds-filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-pill {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+  border-color: var(--primary-cyan);
+  color: var(--text-primary);
+}
+
+.filter-pill.active {
+  background: var(--primary-cyan);
+  color: #FFFFFF;
+  border-color: var(--primary-cyan);
+  box-shadow: 0 4px 12px rgba(0, 197, 165, 0.25);
+}
+
+.filter-badge {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.filter-pill.active .filter-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+/* Cards da Cozinha */
+.kds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.kds-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 2px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.kds-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kds-card.border-preparing {
+  border-color: #ED8936;
+}
+
+.kds-card.border-pending {
+  border-color: #ECC94B;
+}
+
+.kds-card.border-ready {
+  border-color: #38A169;
+}
+
+.kds-card.border-dispatched {
+  border-color: #3182CE;
+}
+
+.kds-card.border-canceled {
+  border-color: #E53E3E;
+  opacity: 0.85;
+}
+
+.kds-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+
+.timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.timer-normal {
+  background: #EBF8FF;
+  color: #2B6CB0;
+}
+
+.timer-warning {
+  background: #FEFCBF;
+  color: #975A16;
+}
+
+.timer-late {
+  background: #FED7D7;
+  color: #9B2C2C;
+  animation: pulse-danger 1.5s infinite;
+}
+
+@keyframes pulse-danger {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.kds-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.kds-btn-main {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.kds-btn-ready {
+  background: #38A169;
+  color: white;
+}
+.kds-btn-ready:hover {
+  background: #2F855A;
+}
+
+.kds-btn-start {
+  background: #ED8936;
+  color: white;
+}
+.kds-btn-start:hover {
+  background: #DD6B20;
+}
+
+.kds-btn-dispatch {
+  background: #3182CE;
+  color: white;
+}
+.kds-btn-dispatch:hover {
+  background: #2B6CB0;
+}
+
+.kds-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.kds-btn-cancel {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #FEB2B2;
+  background: #FFF5F5;
+  color: #C53030;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.kds-btn-cancel:hover {
+  background: #FED7D7;
+}
+
+.kds-btn-delete {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  background: var(--border-light);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.kds-btn-delete:hover {
+  background: #E2E8F0;
+  color: #E53E3E;
+  border-color: #FEB2B2;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
