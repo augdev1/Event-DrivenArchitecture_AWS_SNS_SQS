@@ -290,77 +290,47 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Top Header com Alternador de Visões */}
+      {/* Top Header com Seletor de Visão */}
       <header className="app-header">
-        <div className="brand">
-          <div className="brand-logo">iF</div>
-          <div className="brand-info">
-            <h1>iFood Cloud Delivery</h1>
-            <p>
-              <span>📍 Av. Paulista, 1000</span> • 
-              <span style={{ color: 'var(--primary-cyan)', fontWeight: 600 }}> Entrega em 25-35 min</span>
-            </p>
+        <div className="header-brand-wrap">
+          <div className="brand">
+            <div className="brand-logo">iF</div>
+            <div className="brand-info">
+              <h1>iFood Cloud Delivery</h1>
+              <p>
+                <span>📍 Av. Paulista, 1000</span> • 
+                <span style={{ color: 'var(--primary-cyan)', fontWeight: 600 }}> 25-35 min</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="cloud-badge">
+            <span className="pulse-dot"></span>
+            <span className="cloud-badge-text-full">AWS LocalStack Conectado</span>
+            <span className="cloud-badge-text-mobile">AWS Conectado</span>
           </div>
         </div>
 
-        {/* Alternador de Visões */}
-        <div style={{ display: 'flex', gap: '6px', background: 'var(--bg-app)', padding: '4px', borderRadius: 'var(--radius-full)' }}>
+        {/* Alternador de Visões: Cliente vs Cozinha */}
+        <div className="nav-tabs-wrapper">
           <button
+            className={`nav-tab-btn ${activeTab === 'customer' ? 'active' : ''}`}
             onClick={() => setActiveTab('customer')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: activeTab === 'customer' ? 'var(--primary-cyan)' : 'transparent',
-              color: activeTab === 'customer' ? '#FFF' : 'var(--text-secondary)',
-              transition: 'all 0.2s ease',
-            }}
           >
             <Smartphone size={15} /> Visão Cliente
           </button>
 
           <button
+            className={`nav-tab-btn ${activeTab === 'kitchen' ? 'active' : ''}`}
             onClick={() => setActiveTab('kitchen')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: activeTab === 'kitchen' ? 'var(--primary-cyan)' : 'transparent',
-              color: activeTab === 'kitchen' ? '#FFF' : 'var(--text-secondary)',
-              transition: 'all 0.2s ease',
-            }}
           >
             <ChefHat size={15} /> Visão Cozinha (KDS)
             {countByStatus('PREPARING') > 0 && (
-              <span style={{
-                background: '#FFF',
-                color: 'var(--primary-cyan-dark)',
-                fontSize: '11px',
-                padding: '1px 6px',
-                borderRadius: '10px',
-                fontWeight: 800
-              }}>
+              <span className="tab-count-badge">
                 {countByStatus('PREPARING')}
               </span>
             )}
           </button>
-        </div>
-
-        <div className="cloud-badge">
-          <span className="pulse-dot"></span>
-          <span>AWS LocalStack Conectado</span>
         </div>
       </header>
 
@@ -411,18 +381,7 @@ export default function App() {
             </div>
 
             {/* Rodapé fixo do cardápio com Valor Total permanente */}
-            <div style={{
-              marginTop: '20px',
-              paddingTop: '16px',
-              borderTop: '2px dashed var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--bg-card-hover)',
-              padding: '14px 18px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-light)'
-            }}>
+            <div className="menu-total-footer">
               <div>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Resumo do Cardápio
@@ -436,12 +395,7 @@ export default function App() {
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                   VALOR TOTAL:
                 </span>
-                <div style={{
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  color: 'var(--primary-cyan)',
-                  lineHeight: '1.2'
-                }}>
+                <div className="total-value">
                   R$ {total.toFixed(2)}
                 </div>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
