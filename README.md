@@ -31,6 +31,9 @@ A solução adota o princípio de **desacoplamento temporal e de serviços**: a 
 
 ---
 
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/5c8d8edd-baf7-482a-84e1-8fbbc7bb2fbe" />
+
+---
 ## Papel dos Serviços da AWS no Projeto
 
 A arquitetura foi desenhada aproveitando os pontos fortes de cada serviço do ecossistema AWS:
