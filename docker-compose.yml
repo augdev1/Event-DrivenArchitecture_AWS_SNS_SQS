@@ -1,0 +1,45 @@
+services:
+  localstack:
+    container_name: localstack-aws
+    image: localstack/localstack:3.4.0
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=sqs,sns,dynamodb
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./infra/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  order-api:
+    container_name: order-api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8008:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    depends_on:
+      - localstack
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  kitchen-worker:
+    container_name: kitchen-worker
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    depends_on:
+      - localstack
+    command: ["python", "-m", "workers.kitchen_worker"]

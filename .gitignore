@@ -1,0 +1,38 @@
+# Python & Ambientes Virtuais
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Variáveis de Ambiente e Credenciais
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs e Docker
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.docker/
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
