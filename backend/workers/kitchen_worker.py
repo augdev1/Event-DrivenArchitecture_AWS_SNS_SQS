@@ -64,19 +64,45 @@ def process_kitchen_queue():
                 else:
                     order_data = body_json
 
-                order_id = order_data["order_id"]
+                order_id = order_data.get("order_id")
+                event_name = order_data.get("event", "")
+
+                # 1. Filtro de Mensageria: O worker da cozinha física SÓ deve processar novos pedidos (OrderCreated)
+                # Eventos de OrderReady, OrderDispatched, OrderCanceled etc. são apenas confirmados e descartados do SQS
+                if event_name and event_name != "OrderCreated":
+                    print(f"ℹ️ [SQS] Evento '{event_name}' ignorado pelo worker de entrada da cozinha.")
+                    sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=receipt_handle)
+                    continue
+
+                if not order_id:
+                    sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=receipt_handle)
+                    continue
+
+                # 2. Idempotência e Regra de Negócio: Consulta status atual no DynamoDB
+                # Se o pedido já avançou (PREPARING, READY, DISPATCHED ou CANCELED), NÃO regride!
+                try:
+                    res = orders_table.get_item(Key={"order_id": order_id})
+                    if "Item" in res:
+                        current_status = res["Item"].get("status")
+                        if current_status in ["PREPARING", "READY", "DISPATCHED", "CANCELED"]:
+                            print(f"ℹ️ Pedido #{order_id} já está em '{current_status}'. Mantendo status sem regressão.")
+                            sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=receipt_handle)
+                            continue
+                except Exception as e:
+                    print(f"⚠️ Erro ao consultar DynamoDB: {e}")
+
                 customer = order_data.get("customer_name", "Cliente")
                 items = order_data.get("items", [])
 
                 print(f"\n🔔 [NOVO PEDIDO RECEBIDO] Pedido #{order_id} de {customer}")
                 for item in items:
-                    print(f"   👉 {item['quantity']}x {item['name']}")
+                    print(f"   👉 {item.get('quantity', 1)}x {item.get('name', '')}")
 
-                # 1. Muda status para PREPARANDO (Entrou na fila da cozinha física)
+                # 3. Muda status para PREPARANDO (Entrou na esteira da cozinha)
                 update_order_status(order_id, "PREPARING")
                 print(f"🍳 [COZINHA] Pedido #{order_id} entrou na esteira física da cozinha!")
 
-                # 2. Remove a mensagem da fila SQS (confirmação de que a comanda foi recebida na cozinha)
+                # 4. Remove a mensagem da fila SQS
                 sqs.delete_message(
                     QueueUrl=QUEUE_URL,
                     ReceiptHandle=receipt_handle

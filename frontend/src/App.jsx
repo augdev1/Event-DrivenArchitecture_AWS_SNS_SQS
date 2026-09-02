@@ -166,6 +166,14 @@ export default function App() {
 
   // 3. Atualizar Status com Regras de Negócio (PATCH /orders/{id}/status)
   const handleUpdateStatus = async (orderId, newStatus, reason = null) => {
+    // 1. Optimistic UI: atualiza a comanda imediatamente na lista da cozinha e no rastreador do cliente
+    setAllOrders((prev) =>
+      prev.map((o) => (o.order_id === orderId ? { ...o, status: newStatus } : o))
+    );
+    if (activeOrder && activeOrder.order_id === orderId) {
+      setActiveOrder((prev) => ({ ...prev, status: newStatus }));
+    }
+
     try {
       const payload = { status: newStatus };
       if (reason) payload.reason = reason;
@@ -179,6 +187,7 @@ export default function App() {
       if (!res.ok) {
         const errData = await res.json();
         alert(`Regra de Negócio: ${errData.detail || 'Não foi possível alterar o status'}`);
+        fetchOrdersList();
         return;
       }
 
@@ -188,7 +197,7 @@ export default function App() {
       setCancelModalOrder(null);
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
-      alert('Erro de conexão ao atualizar status do pedido.');
+      fetchOrdersList();
     }
   };
 
@@ -239,7 +248,7 @@ export default function App() {
     const interval = setInterval(async () => {
       fetchOrdersList();
 
-      if (activeOrder && activeOrder.status !== 'READY' && activeOrder.status !== 'DISPATCHED') {
+      if (activeOrder && activeOrder.status !== 'DISPATCHED' && activeOrder.status !== 'CANCELED') {
         try {
           const res = await fetch(`${API_BASE_URL}/orders/${activeOrder.order_id}`);
           if (res.ok) {
