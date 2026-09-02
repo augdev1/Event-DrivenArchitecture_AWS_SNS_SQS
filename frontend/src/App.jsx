@@ -73,6 +73,24 @@ export default function App() {
   const [cancelModalOrder, setCancelModalOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState('Falta de ingredientes na cozinha');
 
+  // Modal de Recibo Digital Amazon S3 / AWS Lambda
+  const [receiptModal, setReceiptModal] = useState(null);
+
+  const handleViewReceipt = async (orderId) => {
+    setReceiptModal({ order_id: orderId, loading: true, data: null });
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}/receipt`);
+      if (res.ok) {
+        const data = await res.json();
+        setReceiptModal({ order_id: orderId, loading: false, data });
+      } else {
+        setReceiptModal({ order_id: orderId, loading: false, error: 'Recibo ainda em processamento no S3' });
+      }
+    } catch (err) {
+      setReceiptModal({ order_id: orderId, loading: false, error: 'Erro ao consultar recibo no Amazon S3' });
+    }
+  };
+
   // Cálculos de totais do carrinho
   const subtotal = products.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const deliveryFee = subtotal > 0 ? 5.00 : 0;
@@ -481,10 +499,19 @@ export default function App() {
                   {activeOrder.status === 'CANCELED' && '❌ Este pedido foi cancelado pelo restaurante.'}
                 </div>
 
+                {/* Botão de Ver Recibo Fiscal Digital no Amazon S3 */}
+                <button 
+                  className="btn-secondary" 
+                  style={{ marginTop: '12px', width: '100%', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  onClick={() => handleViewReceipt(activeOrder.order_id)}
+                >
+                  🧾 Ver Recibo Fiscal Digital (Amazon S3 / AWS Lambda)
+                </button>
+
                 {(activeOrder.status === 'READY' || activeOrder.status === 'DISPATCHED' || activeOrder.status === 'CANCELED') && (
                   <button 
                     className="btn-primary" 
-                    style={{ marginTop: '10px' }}
+                    style={{ marginTop: '8px' }}
                     onClick={() => setActiveOrder(null)}
                   >
                     <RefreshCw size={16} /> Fazer Novo Pedido
@@ -757,8 +784,17 @@ export default function App() {
                         </button>
                       )}
 
-                      {/* Linha de Ações Secundárias (Cancelar & Deletar) */}
+                      {/* Linha de Ações Secundárias (Recibo S3, Cancelar & Deletar) */}
                       <div className="kds-row-actions">
+                        <button
+                          className="btn-secondary"
+                          style={{ flex: 1, padding: '8px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          onClick={() => handleViewReceipt(order.order_id)}
+                          title="Ver Recibo Fiscal Digital no Amazon S3 (gerado pelo Lambda)"
+                        >
+                          🧾 Recibo S3
+                        </button>
+
                         {order.status !== 'CANCELED' && order.status !== 'DISPATCHED' && (
                           <button
                             className="kds-btn-cancel"
@@ -783,6 +819,83 @@ export default function App() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal de Comprovante Fiscal Digital Amazon S3 / AWS Lambda */}
+      {receiptModal && (
+        <div className="modal-overlay" onClick={() => setReceiptModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🧾 Comprovante Digital (Amazon S3)
+              </h3>
+              <button 
+                onClick={() => setReceiptModal(null)} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Armazenado em: <code>s3://ifood-order-receipts/receipts/{receiptModal.order_id}.json</code>
+              <br />
+              Gerado de forma serverless pela função <b>AWS Lambda</b> via <b>Amazon EventBridge</b>.
+            </div>
+
+            {receiptModal.loading ? (
+              <div style={{ textAlign: 'center', padding: '24px' }}>
+                <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto', display: 'block' }} />
+                <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Consultando bucket S3 via API...
+                </p>
+              </div>
+            ) : receiptModal.data ? (
+              <div style={{
+                background: 'var(--bg-app)',
+                padding: '14px',
+                borderRadius: '12px',
+                border: '1px solid var(--border-light)',
+                fontSize: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                maxHeight: '300px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                  <span>{receiptModal.data.store}</span>
+                  <span style={{ color: 'var(--primary-cyan-dark)' }}>{receiptModal.data.fiscal_receipt_id}</span>
+                </div>
+                <div><b>Consumidor:</b> {receiptModal.data.customer_name}</div>
+                <div><b>Data/Hora Emissão:</b> {new Date(receiptModal.data.issued_at).toLocaleString('pt-BR')}</div>
+                <hr style={{ border: 'none', borderTop: '1px dashed var(--border-color)' }} />
+                <div><b>Itens do Pedido:</b></div>
+                {receiptModal.data.items?.map((it, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{it.quantity}x {it.name}</span>
+                    <span>R$ {(Number(it.price) * Number(it.quantity)).toFixed(2)}</span>
+                  </div>
+                ))}
+                <hr style={{ border: 'none', borderTop: '1px dashed var(--border-color)' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Taxa de Entrega</span>
+                  <span>R$ {Number(receiptModal.data.delivery_fee || 5).toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '14px', color: 'var(--primary-cyan)' }}>
+                  <span>TOTAL PAGO</span>
+                  <span>R$ {Number(receiptModal.data.total_amount).toFixed(2)}</span>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#E53E3E', fontSize: '12px' }}>{receiptModal.error}</p>
+            )}
+
+            <button className="btn-primary" onClick={() => setReceiptModal(null)}>
+              Fechar Recibo
+            </button>
+          </div>
         </div>
       )}
 

@@ -6,7 +6,7 @@ services:
       - "4566:4566"
       - "4510-4559:4510-4559"
     environment:
-      - SERVICES=sqs,sns,dynamodb
+      - SERVICES=sqs,sns,dynamodb,s3,events,lambda
       - AWS_DEFAULT_REGION=us-east-1
       - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:

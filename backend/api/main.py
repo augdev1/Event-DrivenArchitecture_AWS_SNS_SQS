@@ -23,7 +23,7 @@ app.add_middleware(
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL", "http://localhost:4566")
 
-# Clientes Boto3 para SNS e DynamoDB
+# Clientes Boto3 para SNS, SQS, DynamoDB, EventBridge, S3 e Lambda
 sns_client = boto3.client(
     "sns",
     region_name=AWS_REGION,
@@ -40,8 +40,34 @@ dynamodb = boto3.resource(
     aws_secret_access_key="test",
 )
 
+events_client = boto3.client(
+    "events",
+    region_name=AWS_REGION,
+    endpoint_url=AWS_ENDPOINT_URL,
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
+)
+
+s3_client = boto3.client(
+    "s3",
+    region_name=AWS_REGION,
+    endpoint_url=AWS_ENDPOINT_URL,
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
+)
+
+lambda_client = boto3.client(
+    "lambda",
+    region_name=AWS_REGION,
+    endpoint_url=AWS_ENDPOINT_URL,
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
+)
+
 orders_table = dynamodb.Table("Orders")
 TOPIC_ARN = f"arn:aws:sns:{AWS_REGION}:000000000000:order-created"
+EVENT_BUS_NAME = "food-delivery-bus"
+S3_BUCKET_NAME = "ifood-order-receipts"
 
 
 # Modelos Pydantic (Validação de Dados)
@@ -104,29 +130,103 @@ def create_order(request: CreateOrderRequest):
     # 1. Salva o estado inicial no DynamoDB
     orders_table.put_item(Item=order_data)
 
-    # 2. Prepara mensagem para o SNS (convertendo Decimal para float/str para JSON padrão)
-    order_data_sns = {
+    # 2. Prepara payload unificado de evento (convertendo Decimal para float/str para JSON padrão)
+    order_data_event = {
+        "event": "OrderCreated",
         "order_id": order_id,
         "customer_name": request.customer_name,
         "items": [item.model_dump() for item in request.items],
         "total_amount": str(total_amount),
+        "total": float(total_amount),
         "status": "PENDING",
         "created_at": now_iso
     }
 
-    # Publica o evento no AWS SNS (Fan-out para as filas SQS)
-    sns_client.publish(
-        TopicArn=TOPIC_ARN,
-        Message=json.dumps(order_data_sns),
-        Subject="OrderCreated"
-    )
+    # 3. Publica no AWS SNS (Fan-Out para filas SQS, como a kitchen-queue)
+    try:
+        sns_client.publish(
+            TopicArn=TOPIC_ARN,
+            Message=json.dumps(order_data_event),
+            Subject="OrderCreated"
+        )
+    except Exception as e:
+        print(f"⚠️ Aviso SNS: {e}")
+
+    # 4. Publica no Amazon EventBridge (Barramento Central de Eventos Corporativos)
+    try:
+        events_client.put_events(
+            Entries=[
+                {
+                    "Source": "ifood.orders",
+                    "DetailType": "OrderCreated",
+                    "Detail": json.dumps(order_data_event),
+                    "EventBusName": EVENT_BUS_NAME
+                }
+            ]
+        )
+    except Exception as e:
+        print(f"⚠️ Aviso EventBridge: {e}")
+
+    # 5. Dispara Função Serverless AWS Lambda para arquivar Recibo Digital no Amazon S3
+    try:
+        lambda_client.invoke(
+            FunctionName="order-receipt-generator",
+            InvocationType="Event",  # Execução assíncrona (non-blocking)
+            Payload=json.dumps({"detail": order_data_event})
+        )
+    except Exception as e:
+        print(f"⚠️ Aviso Lambda Receipt Generator: {e}")
 
     return {
         "message": "Pedido recebido com sucesso!",
         "order_id": order_id,
         "status": "PENDING",
-        "created_at": now_iso
+        "created_at": now_iso,
+        "receipt_s3_bucket": S3_BUCKET_NAME,
+        "event_bus": EVENT_BUS_NAME
     }
+
+
+@app.get("/orders/{order_id}/receipt")
+def get_order_receipt(order_id: str):
+    """
+    Recupera o Comprovante Fiscal / Recibo Digital diretamente do Amazon S3,
+    gerado pela função AWS Lambda order-receipt-generator
+    """
+    s3_key = f"receipts/{order_id}.json"
+    try:
+        res = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        return json.loads(res["Body"].read().decode("utf-8"))
+    except Exception:
+        # Se o Lambda ainda não gerou ou ocorreu delay, busca no DynamoDB e gera no S3 on-demand
+        order_res = orders_table.get_item(Key={"order_id": order_id})
+        if "Item" not in order_res:
+            raise HTTPException(status_code=404, detail="Comprovante e pedido não encontrados")
+        item = order_res["Item"]
+        total = float(item.get("total_amount", 0.0))
+        receipt_data = {
+            "fiscal_receipt_id": f"REC-{order_id.upper()}",
+            "order_id": order_id,
+            "store": "iFood Cloud Gourmet Delivery",
+            "customer_name": item.get("customer_name", "Cliente"),
+            "items": item.get("items", []),
+            "subtotal": round(total - 5.0, 2) if total > 5.0 else total,
+            "delivery_fee": 5.0,
+            "total_amount": total,
+            "issued_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "status": "ISSUED",
+            "storage_class": "STANDARD_S3"
+        }
+        try:
+            s3_client.put_object(
+                Bucket=S3_BUCKET_NAME,
+                Key=s3_key,
+                Body=json.dumps(receipt_data, indent=2),
+                ContentType="application/json"
+            )
+        except Exception:
+            pass
+        return receipt_data
 
 
 @app.get("/orders/{order_id}")
@@ -219,11 +319,29 @@ def update_order_status_route(order_id: str, req: UpdateStatusRequest):
         "reason": req.reason,
         "updated_at": now_iso
     }
-    sns_client.publish(
-        TopicArn=TOPIC_ARN,
-        Message=json.dumps(event_payload),
-        Subject=f"Order{new_status.capitalize()}"
-    )
+    try:
+        sns_client.publish(
+            TopicArn=TOPIC_ARN,
+            Message=json.dumps(event_payload),
+            Subject=f"Order{new_status.capitalize()}"
+        )
+    except Exception as e:
+        print(f"⚠️ Aviso SNS: {e}")
+
+    # Publica evento de transição de status no Amazon EventBridge
+    try:
+        events_client.put_events(
+            Entries=[
+                {
+                    "Source": "ifood.orders",
+                    "DetailType": f"Order{new_status.capitalize()}",
+                    "Detail": json.dumps(event_payload),
+                    "EventBusName": EVENT_BUS_NAME
+                }
+            ]
+        )
+    except Exception as e:
+        print(f"⚠️ Aviso EventBridge: {e}")
 
     return {
         "message": f"Pedido #{order_id} atualizado para {new_status}!",
