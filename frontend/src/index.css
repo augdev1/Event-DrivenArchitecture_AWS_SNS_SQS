@@ -173,6 +173,14 @@ body {
   color: #FFF;
 }
 
+.tab-label-full {
+  display: inline;
+}
+
+.tab-label-short {
+  display: none;
+}
+
 .tab-count-badge {
   background: #FFF;
   color: var(--primary-cyan-dark);
@@ -937,11 +945,13 @@ body {
 
   /* Header Mobile: preenche as laterais sem espaços vazios */
   .app-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
     border-radius: 0 0 16px 16px;
     border-left: none;
     border-right: none;
     border-top: none;
-    margin: 0 0 4px 0;
+    margin: 0 0 8px 0;
     width: 100%;
     box-sizing: border-box;
     padding: 12px 14px;
@@ -996,20 +1006,36 @@ body {
   }
 
   .nav-tabs-wrapper {
-    width: 100%;
-    display: flex;
-    gap: 4px;
-    background: var(--border-light);
-    padding: 3px;
-    border-radius: var(--radius-full);
+    width: 100% !important;
+    display: flex !important;
+    gap: 4px !important;
+    background: var(--border-light) !important;
+    padding: 3px !important;
+    border-radius: var(--radius-full) !important;
+    box-sizing: border-box !important;
   }
 
   .nav-tab-btn {
-    flex: 1;
-    justify-content: center;
-    padding: 8px 10px;
-    font-size: 12px;
-    border-radius: var(--radius-full);
+    flex: 1 1 50% !important;
+    width: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    border-radius: var(--radius-full) !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+  }
+
+  .tab-label-full {
+    display: none !important;
+  }
+
+  .tab-label-short {
+    display: inline !important;
+    font-size: 12px !important;
   }
 
   /* Grid e Conteúdos: preenchem as laterais sem espaços vazios */

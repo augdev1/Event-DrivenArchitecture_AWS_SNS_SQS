@@ -317,14 +317,18 @@ export default function App() {
             className={`nav-tab-btn ${activeTab === 'customer' ? 'active' : ''}`}
             onClick={() => setActiveTab('customer')}
           >
-            <Smartphone size={15} /> Visão Cliente
+            <Smartphone size={14} /> 
+            <span className="tab-label-full">Visão Cliente</span>
+            <span className="tab-label-short">Cliente</span>
           </button>
 
           <button
             className={`nav-tab-btn ${activeTab === 'kitchen' ? 'active' : ''}`}
             onClick={() => setActiveTab('kitchen')}
           >
-            <ChefHat size={15} /> Visão Cozinha (KDS)
+            <ChefHat size={14} /> 
+            <span className="tab-label-full">Visão Cozinha (KDS)</span>
+            <span className="tab-label-short">Cozinha (KDS)</span>
             {countByStatus('PREPARING') > 0 && (
               <span className="tab-count-badge">
                 {countByStatus('PREPARING')}
